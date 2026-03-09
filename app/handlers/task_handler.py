@@ -26,9 +26,9 @@ def extract_user(event):
 
     token = auth_header.split(" ")[1]
 
-    payload = verify_token(token)
+    user_id = verify_token(token)
 
-    return payload["user_id"]
+    return user_id
 
 
 # -----------------------------

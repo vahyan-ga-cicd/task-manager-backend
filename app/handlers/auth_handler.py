@@ -5,10 +5,13 @@ from app.utils.response import success, error
 
 
 def register(event):
-
-    body = json.loads(event["body"])
-
     try:
+        body_str = event.get("body", "{}")
+        if isinstance(body_str, str):
+            body = json.loads(body_str)
+        else:
+            body = body_str
+
         user = register_user(
             body["username"],
             body["email"],
@@ -22,10 +25,13 @@ def register(event):
 
 
 def login(event):
-
-    body = json.loads(event["body"])
-
     try:
+        body_str = event.get("body", "{}")
+        if isinstance(body_str, str):
+            body = json.loads(body_str)
+        else:
+            body = body_str
+
         token = login_user(
             body["email"],
             body["password"]
