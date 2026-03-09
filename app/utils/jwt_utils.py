@@ -1,6 +1,6 @@
 import jwt
 import datetime
-from src.config.settings import JWT_SECRET
+from app.config.settings import JWT_SECRET
 
 def generate_token(user_id):
 
