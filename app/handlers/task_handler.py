@@ -12,15 +12,18 @@ from app.utils.response import success, error
 
 
 def extract_user(event):
-    try:
-        auth_header = event.get("headers", {}).get("Authorization") or event.get("headers", {}).get("authorization")
-        if not auth_header:
-            raise Exception("Authorization header missing")
-        token = auth_header.split(" ")[1]
-        return verify_token(token)
-    except Exception as e:
-        raise Exception(f"Authentication failed: {str(e)}")
+    headers = event.get("headers", {})
 
+    auth_header = headers.get("authorization") or headers.get("Authorization")
+
+    if not auth_header:
+        raise Exception("Authorization header missing")
+
+    token = auth_header.split(" ")[1]
+
+    payload = verify_token(token)
+
+    return payload["user_id"]
 
 def create(event):
     try:
