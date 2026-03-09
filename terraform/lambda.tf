@@ -10,6 +10,10 @@ resource "aws_lambda_function" "backend" {
 
   timeout = 30
 
+  lifecycle {
+    ignore_changes = [image_uri]
+  }
+
   environment {
     variables = {
       JWT_SECRET  = var.jwt_secret
