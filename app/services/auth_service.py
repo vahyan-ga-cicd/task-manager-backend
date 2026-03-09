@@ -9,7 +9,7 @@ from app.utils.jwt_utils import generate_token
 users_table = get_table(USERS_TABLE)
 
 
-def register_user(uername,email, password):
+def register_user(username, email, password):
 
     user_id = str(uuid.uuid4())
 
@@ -21,7 +21,7 @@ def register_user(uername,email, password):
     users_table.put_item(
         Item={
             "user_id": user_id,
-            "username":username,
+            "username": username,
             "email": email,
             "password_hash": password_hash
         }
