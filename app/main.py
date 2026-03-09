@@ -3,32 +3,46 @@ from app.handlers.task_handler import create, list_tasks, update, delete
 
 
 def handler(event, context):
+    print(event)
 
-    path = event["path"]
-    method = event["httpMethod"]
+    path = event.get("rawPath", "")
+    method = event.get("requestContext", {}).get("http", {}).get("method", "")
+
+    # Root health check
     if path == "/" and method == "GET":
         return {
             "statusCode": 200,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"message": "Task Manager API running"})
         }
-    if path == "/auth/register" and method == "POST":
+
+    # Auth routes
+    if "/auth/register" in path and method == "POST":
         return register(event)
 
-    if path == "/auth/login" and method == "POST":
+    if "/auth/login" in path and method == "POST":
         return login(event)
 
-    if path == "/tasks" and method == "POST":
+    # Task routes
+    if "/tasks" in path and method == "POST":
         return create(event)
 
-    if path == "/tasks" and method == "GET":
+    if "/tasks" in path and method == "GET":
         return list_tasks(event)
 
-    if path == "/tasks/update" and method == "PUT":
+    if "/tasks/update" in path and method == "PUT":
         return update(event)
 
-    if path == "/tasks/delete" and method == "DELETE":
+    if "/tasks/delete" in path and method == "DELETE":
         return delete(event)
 
+    # Default route
     return {
         "statusCode": 404,
-        "body": "Not found"
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps({
+            "message": "Route not found",
+            "path": path,
+            "method": method
+        })
     }
