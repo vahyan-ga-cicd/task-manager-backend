@@ -11,12 +11,12 @@ resource "aws_lambda_function" "backend" {
   timeout = 30
 
   environment {
-  variables = {
-    JWT_SECRET  = var.jwt_secret
-    REDIS_HOST  = var.redis_host
-    REDIS_PORT  = var.redis_port
-    USERS_TABLE = var.users_table
-    TASKS_TABLE = var.tasks_table
+    variables = {
+      JWT_SECRET  = var.jwt_secret
+      REDIS_HOST  = var.redis_host
+      REDIS_PORT  = var.redis_port
+      USERS_TABLE = var.users_table
+      TASKS_TABLE = var.tasks_table
+    }
   }
-}
 }

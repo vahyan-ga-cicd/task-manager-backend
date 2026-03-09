@@ -6,7 +6,10 @@ def handler(event, context):
 
     path = event["path"]
     method = event["httpMethod"]
-
+    if path == "/" and method == "GET":
+        return {
+            "statusCode": 200,
+        }
     if path == "/auth/register" and method == "POST":
         return register(event)
 

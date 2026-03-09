@@ -3,4 +3,4 @@ python-dotenv
 PyJWT
 bcrypt
 redis
-uuid
+uuid==1.30
