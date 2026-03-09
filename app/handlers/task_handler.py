@@ -12,60 +12,72 @@ from app.utils.response import success, error
 
 
 def extract_user(event):
-
-    token = event["headers"]["Authorization"].split(" ")[1]
-    return verify_token(token)
+    try:
+        auth_header = event.get("headers", {}).get("Authorization") or event.get("headers", {}).get("authorization")
+        if not auth_header:
+            raise Exception("Authorization header missing")
+        token = auth_header.split(" ")[1]
+        return verify_token(token)
+    except Exception as e:
+        raise Exception(f"Authentication failed: {str(e)}")
 
 
 def create(event):
+    try:
+        user_id = extract_user(event)
 
-    user_id = extract_user(event)
+        body = json.loads(event["body"])
 
-    body = json.loads(event["body"])
+        task = create_task(
+            user_id,
+            body["title"],
+            body["description"]
+        )
 
-    task = create_task(
-        user_id,
-        body["title"],
-        body["description"]
-    )
-
-    return success(task)
+        return success(task)
+    except Exception as e:
+        return error(str(e))
 
 
 def list_tasks(event):
+    try:
+        user_id = extract_user(event)
 
-    user_id = extract_user(event)
+        tasks = get_tasks(user_id)
 
-    tasks = get_tasks(user_id)
-
-    return success(tasks)
+        return success(tasks)
+    except Exception as e:
+        return error(str(e))
 
 
 def update(event):
+    try:
+        user_id = extract_user(event)
 
-    user_id = extract_user(event)
+        body = json.loads(event["body"])
 
-    body = json.loads(event["body"])
+        result = update_task(
+            user_id,
+            body["task_id"],
+            body["status"]
+        )
 
-    result = update_task(
-        user_id,
-        body["task_id"],
-        body["status"]
-    )
-
-    return success(result)
-
+        return success(result)
+    except Exception as e:
+        return error(str(e))
 
 
 def delete(event):
+    try:
+        user_id = extract_user(event)
 
-    user_id = extract_user(event)
+        body = json.loads(event["body"])
 
-    body = json.loads(event["body"])
+        result = delete_task(
+            user_id,
+            body["task_id"]
+        )
 
-    result = delete_task(
-        user_id,
-        body["task_id"]
-    )
-
-    return success(result)
+        return success(result)
+    except Exception as e:
+        return error(str(e))
