@@ -1,6 +1,6 @@
 from app.handlers.auth_handler import register, login
 from app.handlers.task_handler import create, list_tasks, update, delete
-
+import json
 
 def handler(event, context):
     print(event)
