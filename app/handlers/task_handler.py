@@ -11,9 +11,14 @@ from app.utils.jwt_utils import verify_token
 from app.utils.response import success, error
 
 
+# -----------------------------
+# Extract user from JWT token
+# -----------------------------
 def extract_user(event):
+
     headers = event.get("headers", {})
 
+    # API Gateway sometimes sends lowercase headers
     auth_header = headers.get("authorization") or headers.get("Authorization")
 
     if not auth_header:
@@ -25,11 +30,18 @@ def extract_user(event):
 
     return payload["user_id"]
 
+
+# -----------------------------
+# Create Task
+# -----------------------------
 def create(event):
     try:
         user_id = extract_user(event)
 
-        body = json.loads(event["body"])
+        body = event.get("body", {})
+
+        if isinstance(body, str):
+            body = json.loads(body)
 
         task = create_task(
             user_id,
@@ -38,10 +50,14 @@ def create(event):
         )
 
         return success(task)
+
     except Exception as e:
         return error(str(e))
 
 
+# -----------------------------
+# Get All Tasks for User
+# -----------------------------
 def list_tasks(event):
     try:
         user_id = extract_user(event)
@@ -49,15 +65,22 @@ def list_tasks(event):
         tasks = get_tasks(user_id)
 
         return success(tasks)
+
     except Exception as e:
         return error(str(e))
 
 
+# -----------------------------
+# Update Task
+# -----------------------------
 def update(event):
     try:
         user_id = extract_user(event)
 
-        body = json.loads(event["body"])
+        body = event.get("body", {})
+
+        if isinstance(body, str):
+            body = json.loads(body)
 
         result = update_task(
             user_id,
@@ -66,15 +89,22 @@ def update(event):
         )
 
         return success(result)
+
     except Exception as e:
         return error(str(e))
 
 
+# -----------------------------
+# Delete Task
+# -----------------------------
 def delete(event):
     try:
         user_id = extract_user(event)
 
-        body = json.loads(event["body"])
+        body = event.get("body", {})
+
+        if isinstance(body, str):
+            body = json.loads(body)
 
         result = delete_task(
             user_id,
@@ -82,5 +112,6 @@ def delete(event):
         )
 
         return success(result)
+
     except Exception as e:
         return error(str(e))
