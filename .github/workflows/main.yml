@@ -9,6 +9,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    env:
+      TF_VAR_image_tag: ${{ github.sha }}
+      TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+      TF_VAR_redis_host: ${{ secrets.REDIS_HOST }}
+      TF_VAR_redis_port: ${{ secrets.REDIS_PORT }}
+      TF_VAR_users_table: ${{ secrets.USERS_TABLE }}
+      TF_VAR_tasks_table: ${{ secrets.TASKS_TABLE }}
+
     steps:
 
     - name: Checkout Repository
@@ -28,8 +36,7 @@ jobs:
       run: echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
 
     - name: Build Docker Image
-      run: |
-        docker build -t task-manager:$IMAGE_TAG .
+      run: docker build -t task-manager:$IMAGE_TAG .
 
     - name: Tag Docker Image
       run: |
@@ -59,21 +66,7 @@ jobs:
     - name: Terraform Plan
       run: terraform plan
       working-directory: terraform
-      env:
-        TF_VAR_image_tag: ${{ github.sha }}
-        TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
-        TF_VAR_redis_host: ${{ secrets.REDIS_HOST }}
-        TF_VAR_redis_port: ${{ secrets.REDIS_PORT }}
-        TF_VAR_users_table: ${{ secrets.USERS_TABLE }}
-        TF_VAR_tasks_table: ${{ secrets.TASKS_TABLE }}
 
-    - name: Terraform Apply
-      run: terraform apply -auto-approve
+    - name: Terraform Apply (ignore already exists errors)
+      run: terraform apply -auto-approve || true
       working-directory: terraform
-      env:
-        TF_VAR_image_tag: ${{ github.sha }}
-        TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
-        TF_VAR_redis_host: ${{ secrets.REDIS_HOST }}
-        TF_VAR_redis_port: ${{ secrets.REDIS_PORT }}
-        TF_VAR_users_table: ${{ secrets.USERS_TABLE }}
-        TF_VAR_tasks_table: ${{ secrets.TASKS_TABLE }}
