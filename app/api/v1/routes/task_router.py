@@ -6,9 +6,9 @@ from app.services.task_service import (
     update_task,
     delete_task
 )
-from app.middleware.auth_middleware import get_current_user_id
+from app.api.v1.middleware.auth_middleware import get_current_user_id
 
-router = APIRouter(prefix="/api/v1/tasks", tags=["Tasks"])
+router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 class CreateTaskRequest(BaseModel):
     title: str

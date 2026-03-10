@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 from app.services.auth_service import register_user, login_user, get_user
-from app.middleware.auth_middleware import get_current_user_id
+from app.api.v1.middleware.auth_middleware import get_current_user_id
 
-router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 class RegisterRequest(BaseModel):
     username: str

@@ -1,11 +1,11 @@
+from app.api.index import v1Router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
-from app.routes import auth_router, task_router
 
 app = FastAPI(title="Task Manager API", version="1.0.0")
 
-# CORS middleware
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,9 +14,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(auth_router.router)
-app.include_router(task_router.router)
+
+app.include_router(v1Router)
+
 
 
 @app.get("/")
@@ -25,11 +25,11 @@ async def root():
 
 
 
-# 👇 AWS Lambda handler
+
 handler = Mangum(app)
 
 
-# 👇 Local development
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
