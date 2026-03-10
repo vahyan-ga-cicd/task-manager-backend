@@ -1,9 +1,8 @@
-resource "aws_elasticache_cluster" "redis" {
-
-  cluster_id           = "task-manager-redis"
-  engine               = "redis"
-  node_type            = "cache.t3.micro"
-  num_cache_nodes      = 1
-  parameter_group_name = "default.redis7"
-  port                 = 6379
+resource "aws_security_group_rule" "redis_lambda" {
+  type                     = "ingress"
+  from_port                = 6379
+  to_port                  = 6379
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.redis_sg.id
+  source_security_group_id = aws_security_group.lambda_sg.id
 }
