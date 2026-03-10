@@ -1,8 +1,8 @@
 import json
 
-from app.services.auth_service import register_user, login_user
+from app.services.auth_service import register_user, login_user, get_user
 from app.utils.response import success, error
-
+from app.middleware.auth_middleware import authenticate_user
 
 def register(event):
     try:
@@ -39,5 +39,18 @@ def login(event):
 
         return success(token)
 
+    except Exception as e:
+        return error(str(e))
+
+
+def get_current_user(event):
+   
+    try:
+        user_id = authenticate_user(event)
+        
+        user = get_user(user_id)
+        
+        return success(user)
+        
     except Exception as e:
         return error(str(e))

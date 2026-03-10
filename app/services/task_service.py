@@ -46,7 +46,11 @@ def get_tasks(user_id):
 
     redis_client.setex(cache_key, 300, json.dumps(tasks))
 
-    return tasks
+    return {
+    "status": "success",
+    "status_code": 200,
+    "data": tasks
+}
 
 
 def update_task(user_id, task_id, status):
@@ -67,7 +71,7 @@ def update_task(user_id, task_id, status):
 
     redis_client.delete(f"tasks:{user_id}")
 
-    return {"message": "Task updated"}
+    return {"message": f"{tasks["task_name"]} updated successfully"}
 
 def delete_task(user_id, task_id):
 
@@ -80,4 +84,4 @@ def delete_task(user_id, task_id):
 
     redis_client.delete(f"tasks:{user_id}")
 
-    return {"message": "Task deleted"}
+    return {"message": f"{tasks["task_name"]} deleted successfully"}

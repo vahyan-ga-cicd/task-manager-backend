@@ -50,3 +50,32 @@ def login_user(email, password):
             return {"token": token}
 
     raise Exception("Invalid credentials")
+
+
+def get_user(user_id):
+    try:
+        res = users_table.get_item(
+            Key={
+                "user_id": user_id
+            }
+        )
+
+        user = res.get("Item")
+
+        if not user:
+            raise Exception("User not found")
+
+        # user.pop("password_hash", None)
+
+        return {
+            "status": "success",
+            "status_code": 200,
+            "data": {
+                "user_id": user["user_id"],
+                "username": user["username"],
+                "email": user["email"]
+            }
+        }
+
+    except Exception as e:
+        raise Exception(f"Failed to get user: {str(e)}")
