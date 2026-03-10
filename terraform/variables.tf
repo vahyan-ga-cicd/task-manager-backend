@@ -2,10 +2,6 @@ variable "jwt_secret" {
   type = string
 }
 
-variable "redis_host" {
-  type = string
-}
-
 variable "redis_port" {
   type = string
 }
