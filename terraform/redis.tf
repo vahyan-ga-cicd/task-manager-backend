@@ -15,10 +15,3 @@ resource "aws_elasticache_cluster" "redis" {
   subnet_group_name  = aws_elasticache_subnet_group.redis.name
   security_group_ids = [aws_security_group.redis_sg.id]
 }
-
-resource "aws_ssm_parameter" "redis_host" {
-  name        = "/task-manager/redis-host"
-  description = "The endpoint of the Redis Elasticache cluster"
-  type        = "String"
-  value       = aws_elasticache_cluster.redis.cache_nodes[0].address
-}

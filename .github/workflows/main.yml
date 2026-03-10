@@ -12,6 +12,7 @@ jobs:
     env:
       TF_VAR_image_tag: latest
       TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+      TF_VAR_redis_host: ${{ secrets.REDIS_HOST }}
       TF_VAR_redis_port: ${{ secrets.REDIS_PORT }}
       TF_VAR_users_table: ${{ secrets.USERS_TABLE }}
       TF_VAR_tasks_table: ${{ secrets.TASKS_TABLE }}

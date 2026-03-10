@@ -45,14 +45,6 @@ resource "aws_iam_role_policy" "lambda_policy" {
         ]
 
         Resource = "*"
-      },
-      
-      {
-        Effect = "Allow"
-        Action = [
-          "ssm:GetParameter"
-        ]
-        Resource = "arn:aws:ssm:*:*:parameter/task-manager/redis-host"
       }
 
     ]

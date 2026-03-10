@@ -13,11 +13,6 @@ tasks_table = get_table(TASKS_TABLE)
 # In production, it's enabled by default but will auto-disable if a timeout occurs.
 redis_disabled = ENVIRONMENT == "development"
 
-# Also disable if the redis_client failed to initialize (e.g. failed SSM fetch)
-if redis_client is None:
-    redis_disabled = True
-
-
 def create_task(user_id, title, description):
 
     task_id = str(uuid.uuid4())
