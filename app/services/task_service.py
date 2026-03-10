@@ -71,7 +71,7 @@ def update_task(user_id, task_id, status):
 
     redis_client.delete(f"tasks:{user_id}")
 
-    return {"message": f"{tasks["task_name"]} updated successfully"}
+    return {"message": f"{tasks['task_name']} updated successfully"}
 
 def delete_task(user_id, task_id):
 
@@ -84,4 +84,4 @@ def delete_task(user_id, task_id):
 
     redis_client.delete(f"tasks:{user_id}")
 
-    return {"message": f"{tasks["task_name"]} deleted successfully"}
+    return {"message": f"{tasks['task_name']} deleted successfully"}
