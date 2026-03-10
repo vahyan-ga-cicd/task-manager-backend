@@ -18,6 +18,7 @@ resource "aws_lambda_function" "backend" {
       REDIS_PORT  = var.redis_port
       USERS_TABLE = var.users_table
       TASKS_TABLE = var.tasks_table
+      ENVIRONMENT = var.environment
     }
   }
 }

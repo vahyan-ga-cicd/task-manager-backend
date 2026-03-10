@@ -1,51 +1,35 @@
-from app.handlers.auth_handler import register, login, get_current_user
-from app.handlers.task_handler import create, list_tasks, update, delete
-import json
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
+from app.routes import auth_router, task_router
 
-def handler(event, context):
-    print(event)
+app = FastAPI(title="Task Manager API", version="1.0.0")
 
-    path = event.get("rawPath", "")
-    method = event.get("requestContext", {}).get("http", {}).get("method", "")
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-    # Root health check
-    if path == "/" and method == "GET":
-        return {
-            "statusCode": 200,
-            "headers": {"Content-Type": "application/json"},
-            "body": json.dumps({"message": "Task Manager API running"})
-        }
+# Include routers
+app.include_router(auth_router.router)
+app.include_router(task_router.router)
 
-    # Auth routes
-    if "/auth/register" in path and method == "POST":
-        return register(event)
 
-    if "/auth/login" in path and method == "POST":
-        return login(event)
-    
-    if "/auth/user" in path and method == "GET":
-        return get_current_user(event)
+@app.get("/")
+async def root():
+    return {"message": "Task Manager API running"}
 
-    # Task routes
-    if "/tasks/create-task" in path and method == "POST":
-        return create(event)
 
-    if "/tasks/fetch-task" in path and method == "GET":
-        return list_tasks(event)
 
-    if "/tasks/update-task" in path and method == "PUT":
-        return update(event)
+# 👇 AWS Lambda handler
+handler = Mangum(app)
 
-    if "/tasks/delete-task" in path and method == "DELETE":
-        return delete(event)
 
-    # Default route
-    return {
-        "statusCode": 404,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps({
-            "message": "Route not found",
-            "path": path,
-            "method": method
-        })
-    }
+# 👇 Local development
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

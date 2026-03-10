@@ -12,3 +12,4 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 
 REDIS_HOST = os.getenv("REDIS_HOST")
 REDIS_PORT = os.getenv("REDIS_PORT")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")

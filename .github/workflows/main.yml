@@ -16,6 +16,7 @@ jobs:
       TF_VAR_redis_port: ${{ secrets.REDIS_PORT }}
       TF_VAR_users_table: ${{ secrets.USERS_TABLE }}
       TF_VAR_tasks_table: ${{ secrets.TASKS_TABLE }}
+      TF_VAR_environment: production
 
     steps:
       - name: Checkout Repository

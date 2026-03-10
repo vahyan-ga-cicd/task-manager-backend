@@ -4,9 +4,14 @@ import json
 
 from app.config.db import get_table
 from app.config.redis_db import redis_client
-from app.config.settings import TASKS_TABLE
+from app.config.settings import TASKS_TABLE, ENVIRONMENT
 from boto3.dynamodb.conditions import Key
 tasks_table = get_table(TASKS_TABLE)
+
+# Global flag to disable Redis
+# In development, it's disabled by default to prevent 20+ second latency.
+# In production, it's enabled by default but will auto-disable if a timeout occurs.
+redis_disabled = ENVIRONMENT == "development"
 
 
 def create_task(user_id, title, description):
@@ -24,7 +29,13 @@ def create_task(user_id, title, description):
 
     tasks_table.put_item(Item=item)
 
-    redis_client.delete(f"tasks:{user_id}")
+    global redis_disabled
+    if not redis_disabled:
+        try:
+            redis_client.delete(f"tasks:{user_id}")
+        except Exception as e:
+            print(f"Redis error: {e}")
+            redis_disabled = True
 
     return item
 
@@ -33,7 +44,14 @@ def get_tasks(user_id):
 
     cache_key = f"tasks:{user_id}"
 
-    cached = redis_client.get(cache_key)
+    global redis_disabled
+    cached = None
+    if not redis_disabled:
+        try:
+            cached = redis_client.get(cache_key)
+        except Exception as e:
+            print(f"Redis error: {e}")
+            redis_disabled = True
 
     if cached:
         return json.loads(cached)
@@ -50,7 +68,12 @@ def get_tasks(user_id):
         "data": tasks
     }
 
-    redis_client.setex(cache_key, 300, json.dumps(result))
+    if not redis_disabled:
+        try:
+            redis_client.setex(cache_key, 300, json.dumps(result))
+        except Exception as e:
+            print(f"Redis error: {e}")
+            redis_disabled = True
 
     return result
 
@@ -71,9 +94,15 @@ def update_task(user_id, task_id, status):
         }
     )
 
-    redis_client.delete(f"tasks:{user_id}")
+    global redis_disabled
+    if not redis_disabled:
+        try:
+            redis_client.delete(f"tasks:{user_id}")
+        except Exception as e:
+            print(f"Redis error: {e}")
+            redis_disabled = True
 
-    return {"message": f"{tasks['task_name']} updated successfully"}
+    return {"message": f"Task {task_id} updated successfully"}
 
 def delete_task(user_id, task_id):
 
@@ -84,6 +113,12 @@ def delete_task(user_id, task_id):
         }
     )
 
-    redis_client.delete(f"tasks:{user_id}")
+    global redis_disabled
+    if not redis_disabled:
+        try:
+            redis_client.delete(f"tasks:{user_id}")
+        except Exception as e:
+            print(f"Redis error: {e}")
+            redis_disabled = True
 
-    return {"message": f"{tasks['task_name']} deleted successfully"}
+    return {"message": f"Task {task_id} deleted successfully"}

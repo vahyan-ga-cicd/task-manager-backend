@@ -21,3 +21,8 @@ variable "tasks_table" {
 variable "image_tag" {
   type = string
 }
+
+variable "environment" {
+  type    = string
+  default = "production"
+}
