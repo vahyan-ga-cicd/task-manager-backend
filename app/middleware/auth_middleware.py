@@ -1,20 +1,33 @@
-from fastapi import Request, HTTPException
 from app.utils.jwt_utils import verify_token
 
 
-async def get_current_user(request: Request) -> str:
-    """Extract user_id from JWT token in Authorization header"""
+def authenticate_user(event):
+    """
+    Middleware function to extract and verify user from JWT token in Lambda event
     
-    auth_header = request.headers.get("Authorization")
+    Args:
+        event: Lambda event object containing headers
+        
+    Returns:
+        user_id: The authenticated user's ID
+        
+    Raises:
+        Exception: If authentication fails
+    """
+    headers = event.get("headers", {})
+    
+    # API Gateway sometimes sends lowercase headers
+    auth_header = headers.get("authorization") or headers.get("Authorization")
     
     if not auth_header:
-        raise HTTPException(status_code=401, detail="Authorization header missing")
+        raise Exception("Authorization header missing")
     
     try:
-        token = auth_header.split(" ")[1]  # Extract token from "Bearer <token>"
+        # Extract token from "Bearer <token>"
+        token = auth_header.split(" ")[1]
         user_id = verify_token(token)
         return user_id
     except IndexError:
-        raise HTTPException(status_code=401, detail="Invalid authorization header format")
+        raise Exception("Invalid authorization header format. Expected: Bearer <token>")
     except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+        raise Exception(f"Authentication failed: {str(e)}")

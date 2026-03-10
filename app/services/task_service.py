@@ -5,7 +5,7 @@ import json
 from app.config.db import get_table
 from app.config.redis_db import redis_client
 from app.config.settings import TASKS_TABLE
-
+from boto3.dynamodb.conditions import Key
 tasks_table = get_table(TASKS_TABLE)
 
 
@@ -39,13 +39,12 @@ def get_tasks(user_id):
         return json.loads(cached)
 
     response = tasks_table.query(
-        KeyConditionExpression="user_id = :uid",
-        ExpressionAttributeValues={":uid": user_id}
+        KeyConditionExpression=Key("user_id").eq(user_id)
     )
 
     tasks = response["Items"]
 
-    redis_client.set(cache_key, json.dumps(tasks))
+    redis_client.setex(cache_key, 300, json.dumps(tasks))
 
     return tasks
 

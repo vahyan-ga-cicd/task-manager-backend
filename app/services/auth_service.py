@@ -1,10 +1,10 @@
 import bcrypt
 import uuid
+from boto3.dynamodb.conditions import Key
 
 from app.config.db import get_table
 from app.config.settings import USERS_TABLE
 from app.utils.jwt_utils import generate_token
-
 
 users_table = get_table(USERS_TABLE)
 
@@ -32,19 +32,21 @@ def register_user(username, email, password):
 
 def login_user(email, password):
 
-    response = users_table.scan()
+    response = users_table.query(
+        IndexName="email-index",
+        KeyConditionExpression=Key("email").eq(email)
+    )
 
-    for user in response["Items"]:
+    items = response.get("Items", [])
 
-        if user["email"] == email:
+    for user in items:
 
-            if bcrypt.checkpw(
-                password.encode(),
-                user["password_hash"].encode()
-            ):
+        if bcrypt.checkpw(
+            password.encode(),
+            user["password_hash"].encode()
+        ):
 
-                token = generate_token(user["user_id"])
-
-                return {"token": token}
+            token = generate_token(user["user_id"])
+            return {"token": token}
 
     raise Exception("Invalid credentials")

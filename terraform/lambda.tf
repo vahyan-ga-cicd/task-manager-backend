@@ -14,6 +14,17 @@ resource "aws_lambda_function" "backend" {
     ignore_changes = [image_uri]
   }
 
+    vpc_config {
+    subnet_ids = [
+      aws_subnet.private1.id,
+      aws_subnet.private2.id
+    ]
+
+    security_group_ids = [
+      aws_security_group.lambda_sg.id
+    ]
+  }
+
   environment {
     variables = {
       JWT_SECRET  = var.jwt_secret

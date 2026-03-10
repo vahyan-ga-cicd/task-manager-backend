@@ -8,6 +8,17 @@ resource "aws_dynamodb_table" "users" {
     name = "user_id"
     type = "S"
   }
+
+  attribute {
+    name = "email"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "email-index"
+    hash_key        = "email"
+    projection_type = "ALL"
+  }
 }
 
 

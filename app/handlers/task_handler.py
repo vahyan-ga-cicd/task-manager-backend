@@ -7,28 +7,8 @@ from app.services.task_service import (
     delete_task
 )
 
-from app.utils.jwt_utils import verify_token
+from app.middleware.auth_middleware import authenticate_user
 from app.utils.response import success, error
-
-
-# -----------------------------
-# Extract user from JWT token
-# -----------------------------
-def extract_user(event):
-
-    headers = event.get("headers", {})
-
-    # API Gateway sometimes sends lowercase headers
-    auth_header = headers.get("authorization") or headers.get("Authorization")
-
-    if not auth_header:
-        raise Exception("Authorization header missing")
-
-    token = auth_header.split(" ")[1]
-
-    user_id = verify_token(token)
-
-    return user_id
 
 
 # -----------------------------
@@ -36,7 +16,7 @@ def extract_user(event):
 # -----------------------------
 def create(event):
     try:
-        user_id = extract_user(event)
+        user_id = authenticate_user(event)
 
         body = event.get("body", {})
 
@@ -60,7 +40,7 @@ def create(event):
 # -----------------------------
 def list_tasks(event):
     try:
-        user_id = extract_user(event)
+        user_id = authenticate_user(event)
 
         tasks = get_tasks(user_id)
 
@@ -75,7 +55,7 @@ def list_tasks(event):
 # -----------------------------
 def update(event):
     try:
-        user_id = extract_user(event)
+        user_id = authenticate_user(event)
 
         body = event.get("body", {})
 
@@ -99,7 +79,7 @@ def update(event):
 # -----------------------------
 def delete(event):
     try:
-        user_id = extract_user(event)
+        user_id = authenticate_user(event)
 
         body = event.get("body", {})
 
