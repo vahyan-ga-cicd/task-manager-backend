@@ -3,15 +3,30 @@ import uuid
 from boto3.dynamodb.conditions import Key
 
 from app.config.db import get_table
-from app.config.settings import USERS_TABLE
+from app.config.settings import USERS_TABLE, TASKS_TABLE
 from app.utils.jwt_utils import generate_token
 
 users_table = get_table(USERS_TABLE)
+tasks_table = get_table(TASKS_TABLE)
 
+from fastapi import HTTPException
 
 def register_user(username, email, password):
 
     user_id = str(uuid.uuid4())
+
+    response = users_table.query(
+        IndexName="email-index",
+        KeyConditionExpression=Key("email").eq(email)
+    )
+
+    items = response.get("Items", [])
+
+    if items:
+        raise HTTPException(
+            status_code=400,
+            detail="User with this email already exists"
+        )
 
     password_hash = bcrypt.hashpw(
         password.encode(),
@@ -28,6 +43,7 @@ def register_user(username, email, password):
     )
 
     return {"user_id": user_id}
+
 
 
 def login_user(email, password):
@@ -66,14 +82,27 @@ def get_user(user_id):
             raise Exception("User not found")
 
         # user.pop("password_hash", None)
-
+        res = tasks_table.query(
+            KeyConditionExpression=Key("user_id").eq(user_id)
+        )
+        tasks = res.get("Items", [])
+        tasks_count=len(tasks)
+        completed_tasks=len([task for task in tasks if task["status"]=="completed"])
+        pending_tasks=len([task for task in tasks if task["status"]=="pending"])
         return {
             "status": "success",
             "status_code": 200,
-            "data": {
+            "data":{
+                  "task_data":{
+                "tasks_count": tasks_count,
+                "completed_tasks": completed_tasks,
+                "pending_tasks": pending_tasks,
+             },
+            "user_data": {
                 "user_id": user["user_id"],
                 "username": user["username"],
                 "email": user["email"]
+            }
             }
         }
 

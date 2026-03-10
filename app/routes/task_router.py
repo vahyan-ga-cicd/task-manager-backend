@@ -15,7 +15,7 @@ class CreateTaskRequest(BaseModel):
     description: str
 
 class UpdateTaskRequest(BaseModel):
-    task_id: str
+    
     status: str
 
 class DeleteTaskRequest(BaseModel):
@@ -41,24 +41,24 @@ async def list_tasks(user_id: str = Depends(get_current_user_id)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.put("/update-task")
-async def update(request: UpdateTaskRequest, user_id: str = Depends(get_current_user_id)):
+@router.put("/update-task/{task_id}")
+async def update(task_id: str, request: UpdateTaskRequest, user_id: str = Depends(get_current_user_id)):
     try:
         result = update_task(
             user_id,
-            request.task_id,
+            task_id,
             request.status
         )
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.delete("/delete-task")
-async def delete(request: DeleteTaskRequest, user_id: str = Depends(get_current_user_id)):
+@router.delete("/delete-task/{task_id}")
+async def delete(task_id: str, user_id: str = Depends(get_current_user_id)):
     try:
         result = delete_task(
             user_id,
-            request.task_id
+            task_id
         )
         return result
     except Exception as e:
