@@ -44,13 +44,15 @@ def get_tasks(user_id):
 
     tasks = response["Items"]
 
-    redis_client.setex(cache_key, 300, json.dumps(tasks))
+    result = {
+        "status": "success",
+        "status_code": 200,
+        "data": tasks
+    }
 
-    return {
-    "status": "success",
-    "status_code": 200,
-    "data": tasks
-}
+    redis_client.setex(cache_key, 300, json.dumps(result))
+
+    return result
 
 
 def update_task(user_id, task_id, status):
