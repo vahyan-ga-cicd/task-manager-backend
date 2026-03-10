@@ -11,7 +11,6 @@ resource "aws_lambda_function" "backend" {
     subnet_ids         = data.aws_subnets.default.ids
     security_group_ids = [aws_security_group.lambda_sg.id]
   }
-
   environment {
     variables = {
       JWT_SECRET  = var.jwt_secret
