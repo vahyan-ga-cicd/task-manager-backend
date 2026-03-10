@@ -40,3 +40,16 @@ resource "aws_security_group_rule" "redis_lambda" {
   security_group_id        = aws_security_group.redis_sg.id
   source_security_group_id = aws_security_group.lambda_sg.id
 }
+
+resource "aws_vpc_endpoint" "dynamodb" {
+
+  vpc_id            = data.aws_vpc.default.id
+  service_name      = "com.amazonaws.ap-south-1.dynamodb"
+  vpc_endpoint_type = "Gateway"
+
+  route_table_ids = data.aws_route_tables.default.ids
+}
+
+data "aws_route_tables" "default" {
+  vpc_id = data.aws_vpc.default.id
+}
