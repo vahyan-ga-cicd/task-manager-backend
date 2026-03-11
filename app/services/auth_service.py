@@ -87,7 +87,8 @@ def get_user(user_id):
         )
         tasks = res.get("Items", [])
         tasks_count=len(tasks)
-        completed_tasks=len([task for task in tasks if task["status"]=="completed"])
+        completed_tasks=len([task for task in tasks if task["status"]=="complete"])
+        ongoing_tasks=len([task for task in tasks if task["status"]=="ongoing"])
         pending_tasks=len([task for task in tasks if task["status"]=="pending"])
         return {
             "status": "success",
@@ -96,6 +97,7 @@ def get_user(user_id):
                   "task_data":{
                 "tasks_count": tasks_count,
                 "completed_tasks": completed_tasks,
+                "ongoing_tasks":ongoing_tasks,
                 "pending_tasks": pending_tasks,
              },
             "user_data": {

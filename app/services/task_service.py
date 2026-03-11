@@ -111,7 +111,7 @@ def update_task(user_id, task_id, status):
 
     return {"message": f"{title} updated successfully"}
 
-def delete_task(user_id, task_id, title):
+def delete_task(user_id, task_id):
 
     tasks_table.delete_item(
         Key={
@@ -125,7 +125,7 @@ def delete_task(user_id, task_id, title):
             "task_id": task_id
         }
     )
-    title = res["Item"]["title"]
+    # title = res["Item"]["title"]
 
     global redis_disabled
     if not redis_disabled:
@@ -135,4 +135,4 @@ def delete_task(user_id, task_id, title):
             print(f"Redis error: {e}")
             redis_disabled = True
 
-    return {"message": f" {title} deleted successfully"}
+    return {"message": "  deleted successfully"}
