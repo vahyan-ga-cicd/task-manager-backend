@@ -14,6 +14,7 @@ resource "aws_lambda_function" "backend" {
   environment {
     variables = {
       JWT_SECRET  = var.jwt_secret
+      PASS_SECRET_KEY = var.pass_secret_key
       REDIS_HOST  = var.redis_host
       REDIS_PORT  = var.redis_port
       USERS_TABLE = var.users_table

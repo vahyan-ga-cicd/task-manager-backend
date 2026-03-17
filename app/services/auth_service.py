@@ -10,6 +10,7 @@ users_table = get_table(USERS_TABLE)
 tasks_table = get_table(TASKS_TABLE)
 
 from fastapi import HTTPException
+from app.utils.crypto import encrypt_password,decrypt_password
 
 def register_user(username, email, password):
 
@@ -20,31 +21,24 @@ def register_user(username, email, password):
         KeyConditionExpression=Key("email").eq(email)
     )
 
-    items = response.get("Items", [])
-
-    if items:
+    if response.get("Items"):
         raise HTTPException(
             status_code=400,
-            detail="User with this email already exists"
+            detail="User already exists"
         )
 
-    password_hash = bcrypt.hashpw(
-        password.encode(),
-        bcrypt.gensalt()
-    ).decode()
+    encrypted_password = encrypt_password(password)
 
     users_table.put_item(
         Item={
             "user_id": user_id,
             "username": username,
             "email": email,
-            "password_hash": password_hash
+            "password": encrypted_password   
         }
     )
 
     return {"user_id": user_id}
-
-
 
 def login_user(email, password):
 
@@ -57,16 +51,13 @@ def login_user(email, password):
 
     for user in items:
 
-        if bcrypt.checkpw(
-            password.encode(),
-            user["password_hash"].encode()
-        ):
+        decrypted_password = decrypt_password(user["password"])
 
+        if decrypted_password == password:
             token = generate_token(user["user_id"])
-            return {"token": token}
+            return token
 
     raise Exception("Invalid credentials")
-
 
 def get_user(user_id):
     try:
