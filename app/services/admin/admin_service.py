@@ -21,14 +21,15 @@ def get_all_users():
                 "username": user["username"],
                 "original_password": decrypted_password,
                 "hashed_password": encrypted_password,
-                "email": user["email"]
+                "email": user["email"],
+                "activation_status": user.get("activation_status",None)
             })
 
         return result
     except Exception as e:
         raise Exception(f"Failed to get all users: {str(e)}")
 
-def edit_user(user_id: str, username: str = None, email: str = None, password: str = None):
+def edit_user(user_id: str, username: str = None, email: str = None, password: str = None, activation_status: str = None):
     try:
         res = users_table.get_item(Key={"user_id": user_id})
         user = res.get("Item")
@@ -52,6 +53,10 @@ def edit_user(user_id: str, username: str = None, email: str = None, password: s
             update_expr += " #p = :p,"
             expr_attrs[":p"] = enc_pass
             expr_names["#p"] = "password"
+        if activation_status:
+            update_expr += " #a = :a,"
+            expr_attrs[":a"] = activation_status
+            expr_names["#a"] = "activation_status"
             
         if not expr_attrs:
             return {"message": "No fields to update"}

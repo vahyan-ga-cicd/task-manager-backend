@@ -11,6 +11,7 @@ class EditUserRequest(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
     password: Optional[str] = None
+    activation_status: Optional[str] = None
 
 def verify_admin(user_id: str = Depends(get_current_user_id)):
     try:
@@ -39,7 +40,8 @@ async def update_user(user_id: str, request: EditUserRequest, admin_id: str = De
             user_id=user_id,
             username=request.username,
             email=request.email,
-            password=request.password
+            password=request.password,
+            activation_status=request.activation_status
         )
         return res
     except Exception as e:

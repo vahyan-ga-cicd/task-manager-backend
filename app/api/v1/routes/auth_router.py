@@ -12,6 +12,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=6, max_length=15)
     role: Optional[str] = "user"
+    activation_status: Optional[str] = "active"
 
     @field_validator('password')
     @classmethod
@@ -49,7 +50,8 @@ async def register(request: RegisterRequest):
             request.username,
             request.email,
             request.password,
-            request.role
+            request.role,
+            request.activation_status
         )
 
         return user

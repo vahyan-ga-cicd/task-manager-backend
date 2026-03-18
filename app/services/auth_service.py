@@ -16,7 +16,7 @@ def generate_id()->str:
     user_id = f"VAH{counter:03d}"
     counter += 1
     return user_id
-def register_user(username, email, password,role="user"):
+def register_user(username, email, password,role="user",activation_status="active"):
 
     if len(password) < 6:
         raise HTTPException(
@@ -51,7 +51,8 @@ def register_user(username, email, password,role="user"):
             "username": username,
             "email": email,
             "password": encrypted_password,
-            "role": role
+            "role": role,
+            "activation_status": activation_status
         }
     )
 
@@ -60,7 +61,8 @@ def register_user(username, email, password,role="user"):
          "user_id": user_id,
         "username": username,
         "email": email,
-        "role": role
+        "role": role,
+        "activation_status": activation_status
        }
     }
 
@@ -73,16 +75,34 @@ def login_user(email, password):
 
     items = response.get("Items", [])
 
-    for user in items:
+  
+    if not items:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid credentials"
+        )
 
-        decrypted_password = decrypt_password(user["password"])
+    user = items[0]  
+    
+    if user.get("activation_status") == "inactive":
+        raise HTTPException(
+            status_code=403,
+            detail="User is inactive. Contact admin."
+        )
 
-        if decrypted_password == password:
-            token = generate_token(user["user_id"])
-            return token
+ 
+    decrypted_password = decrypt_password(user["password"])
 
-    raise Exception("Invalid credentials")
+    if decrypted_password != password:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid credentials"
+        )
 
+    
+    token = generate_token(user["user_id"])
+
+    return token
 def get_user(user_id):
     try:
         res = users_table.get_item(
@@ -119,7 +139,8 @@ def get_user(user_id):
                 "user_id": user["user_id"],
                 "username": user["username"],
                 "email": user["email"],
-                "role": user.get("role", "user")
+                "role": user.get("role", "user"),
+                "activation_status": user.get("activation_status", "active")
             }
             }
         }
