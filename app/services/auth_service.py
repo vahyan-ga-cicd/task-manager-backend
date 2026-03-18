@@ -1,5 +1,3 @@
-import bcrypt
-import uuid
 from boto3.dynamodb.conditions import Key
 
 from app.config.db import get_table
@@ -11,10 +9,28 @@ tasks_table = get_table(TASKS_TABLE)
 
 from fastapi import HTTPException
 from app.utils.crypto import encrypt_password,decrypt_password
+counter = 1
 
-def register_user(username, email, password):
+def generate_id()->str:
+    global counter
+    user_id = f"VAH{counter:03d}"
+    counter += 1
+    return user_id
+def register_user(username, email, password,role="user"):
 
-    user_id = str(uuid.uuid4())
+    if len(password) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters"
+        )
+
+    if len(password) > 15:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at most 15 characters"
+        )
+
+    user_id = generate_id()
 
     response = users_table.query(
         IndexName="email-index",
@@ -28,17 +44,25 @@ def register_user(username, email, password):
         )
 
     encrypted_password = encrypt_password(password)
-
+    
     users_table.put_item(
         Item={
             "user_id": user_id,
             "username": username,
             "email": email,
-            "password": encrypted_password   
+            "password": encrypted_password,
+            "role": role
         }
     )
 
-    return {"user_id": user_id}
+    return {
+       "user":{
+         "user_id": user_id,
+        "username": username,
+        "email": email,
+        "role": role
+       }
+    }
 
 def login_user(email, password):
 
@@ -94,7 +118,8 @@ def get_user(user_id):
             "user_data": {
                 "user_id": user["user_id"],
                 "username": user["username"],
-                "email": user["email"]
+                "email": user["email"],
+                "role": user.get("role", "user")
             }
             }
         }

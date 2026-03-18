@@ -3,7 +3,7 @@ from cryptography.fernet import Fernet
 import base64
 
 
-# Convert SECRET_KEY to valid 32-byte key
+
 def get_cipher():
     secret_key = PASS_SECRET_KEY
 
