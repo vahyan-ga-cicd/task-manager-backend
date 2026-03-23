@@ -24,6 +24,11 @@ class AssignTaskRequest(BaseModel):
     title: str
     description: str
     deadline: str
+    priority: str = "Normal"
+
+class AdminUpdateTaskRequest(BaseModel):
+    status: Optional[str] = None
+    priority: Optional[str] = None
 
 def verify_admin(user_id: str = Depends(get_current_user_id)):
     try:
@@ -78,7 +83,9 @@ async def users_short_list(admin_id: str = Depends(verify_admin)):
     from app.services.admin.admin_service import get_users_short_list
     try:
         users = get_users_short_list()
-        return users
+        # Logic: Filter out current admin from user list
+        filtered_users = [u for u in users if u.get("user_id") != admin_id]
+        return filtered_users
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -87,23 +94,42 @@ async def admin_assign_task(request: AssignTaskRequest, admin_id: str = Depends(
     from app.services.task_service import assign_task
     from app.services.auth_service import get_user
     try:
-        # Fetch Admin's name
+        # Fetch Admin's info
         admin_info = get_user(admin_id)
-        admin_name = admin_info.get("data", {}).get("user_data", {}).get("username", "Admin")
+        admin_data = admin_info.get("data", {}).get("user_data", {})
+        admin_name = admin_data.get("username", "Admin")
+        admin_email = admin_data.get("email", "Admin")
         
-        # Fetch Target User's name
+        # Fetch Target User's info
         user_info = get_user(request.assigned_to)
-        user_name = user_info.get("data", {}).get("user_data", {}).get("username", "Employee")
+        user_data = user_info.get("data", {}).get("user_data", {})
+        user_name = user_data.get("username", "Employee")
+        user_email = user_data.get("email", "")
 
         res = assign_task(
             assigned_to_id=request.assigned_to,
             assigned_to_name=user_name,
+            assigned_to_email=user_email,
             assigned_by_name=admin_name,
+            assigned_by_email=admin_email,
             title=request.title,
             description=request.description,
-            deadline=request.deadline
+            deadline=request.deadline,
+            priority=request.priority
         )
         return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.put("/update-task/{target_user_id}/{task_id}")
+async def admin_update_task(target_user_id: str, task_id: str, request: AdminUpdateTaskRequest, admin_id: str = Depends(verify_admin)):
+    from app.services.task_service import update_task_generic
+    try:
+        updates = {k: v for k, v in request.dict().items() if v is not None}
+        if not updates:
+            return {"message": "No updates provided"}
+        result = update_task_generic(target_user_id, task_id, updates)
+        return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

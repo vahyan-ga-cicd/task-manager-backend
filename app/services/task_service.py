@@ -9,25 +9,20 @@ from boto3.dynamodb.conditions import Key
 tasks_table = get_table(TASKS_TABLE)
 
 # Global flag to disable Redis
-# In development, it's disabled by default to prevent 20+ second latency.
-# In production, it's enabled by default but will auto-disable if a timeout occurs.
 redis_disabled = ENVIRONMENT == "development"
 
-def create_task(user_id, title, description):
-
+def create_task(user_id, title, description, priority="Normal"):
     task_id = str(uuid.uuid4())
-
     item = {
         "user_id": user_id,
         "task_id": task_id,
         "title": title,
         "description": description,
         "status": "pending",
+        "priority": priority,
         "created_at": str(datetime.datetime.utcnow())
     }
-
     tasks_table.put_item(Item=item)
-
     global redis_disabled
     if not redis_disabled:
         try:
@@ -35,14 +30,10 @@ def create_task(user_id, title, description):
         except Exception as e:
             print(f"Redis error: {e}")
             redis_disabled = True
-
     return item
 
-
 def get_tasks(user_id):
-
     cache_key = f"tasks:{user_id}"
-
     global redis_disabled
     cached = None
     if not redis_disabled:
@@ -51,56 +42,58 @@ def get_tasks(user_id):
         except Exception as e:
             print(f"Redis error: {e}")
             redis_disabled = True
-
     if cached:
         return json.loads(cached)
-
     response = tasks_table.query(
         KeyConditionExpression=Key("user_id").eq(user_id)
     )
-
     tasks = response["Items"]
-
     result = {
         "status": "success",
         "status_code": 200,
         "data": tasks
     }
-
     if not redis_disabled:
         try:
             redis_client.setex(cache_key, 300, json.dumps(result))
         except Exception as e:
             print(f"Redis error: {e}")
             redis_disabled = True
-
     return result
 
+def update_task_generic(user_id, task_id, updates: dict):
+    if "status" in updates and updates["status"] == "ongoing":
+        res = tasks_table.query(
+            KeyConditionExpression=Key("user_id").eq(user_id)
+        )
+        existing_tasks = res.get("Items", [])
+        ongoing_tasks = [t for t in existing_tasks if t.get("status") == "ongoing" and t.get("task_id") != task_id]
+        if ongoing_tasks:
+            raise Exception("You can only have one task as ongoing at a time.")
 
-def update_task(user_id, task_id, status):
+    update_expression = "SET "
+    expression_attr_names = {}
+    expression_attr_values = {}
+    
+    for i, (key, value) in enumerate(updates.items()):
+        attr_name = f"#k{i}"
+        attr_val = f":v{i}"
+        update_expression += f"{attr_name} = {attr_val}, "
+        expression_attr_names[attr_name] = key
+        expression_attr_values[attr_val] = value
+        
+    update_expression = update_expression.rstrip(", ")
 
     tasks_table.update_item(
         Key={
             "user_id": user_id,
             "task_id": task_id
         },
-        UpdateExpression="SET #s = :s",
-        ExpressionAttributeNames={
-            "#s": "status"
-        },
-        ExpressionAttributeValues={
-            ":s": status
-        }
+        UpdateExpression=update_expression,
+        ExpressionAttributeNames=expression_attr_names,
+        ExpressionAttributeValues=expression_attr_values
     )
     
-    response = tasks_table.get_item(
-        Key={
-            "user_id": user_id,
-            "task_id": task_id
-        }
-    )
-    
-    title = response["Item"]["title"]
     global redis_disabled
     if not redis_disabled:
         try:
@@ -109,24 +102,18 @@ def update_task(user_id, task_id, status):
             print(f"Redis error: {e}")
             redis_disabled = True
 
-    return {"message": f"{title} updated successfully"}
+    return {"message": "task updated successfully"}
+
+def update_task(user_id, task_id, status):
+    return update_task_generic(user_id, task_id, {"status": status})
 
 def delete_task(user_id, task_id):
-
     tasks_table.delete_item(
         Key={
             "user_id": user_id,
             "task_id": task_id
         }
     )
-    res=tasks_table.get_item(
-        Key={
-            "user_id": user_id,
-            "task_id": task_id
-        }
-    )
-    # title = res["Item"]["title"]
-
     global redis_disabled
     if not redis_disabled:
         try:
@@ -134,19 +121,21 @@ def delete_task(user_id, task_id):
         except Exception as e:
             print(f"Redis error: {e}")
             redis_disabled = True
+    return {"message": "task deleted successfully"}
 
-    return {"message": "  deleted successfully"}
-
-def assign_task(assigned_to_id, assigned_to_name, assigned_by_name, title, description, deadline):
+def assign_task(assigned_to_id, assigned_to_name, assigned_to_email, assigned_by_name, assigned_by_email, title, description, deadline, priority="Normal"):
     task_id = str(uuid.uuid4())
     item = {
         "user_id": assigned_to_id,
         "task_id": task_id,
         "assigned_to_name": assigned_to_name,
+        "assigned_to_email": assigned_to_email,
         "assigned_by": assigned_by_name,
+        "assigned_by_email": assigned_by_email,
         "title": title,
         "description": description,
         "status": "pending",
+        "priority": priority,
         "deadline": deadline,
         "created_at": str(datetime.datetime.utcnow())
     }

@@ -13,6 +13,7 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 class CreateTaskRequest(BaseModel):
     title: str
     description: str
+    priority: str = "Normal"
 
 class UpdateTaskRequest(BaseModel):
     
@@ -27,7 +28,8 @@ async def create(request: CreateTaskRequest, user_id: str = Depends(get_current_
         task = create_task(
             user_id,
             request.title,
-            request.description
+            request.description,
+            request.priority
         )
         return task
     except Exception as e:
