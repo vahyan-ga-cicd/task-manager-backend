@@ -22,6 +22,7 @@ def get_all_users():
                 "original_password": decrypted_password,
                 "hashed_password": encrypted_password,
                 "email": user["email"],
+                "role": user.get("role", "user"),
                 "activation_status": user.get("activation_status",None)
             })
 
@@ -29,7 +30,7 @@ def get_all_users():
     except Exception as e:
         raise Exception(f"Failed to get all users: {str(e)}")
 
-def edit_user(user_id: str, username: str = None, email: str = None, password: str = None, activation_status: str = None):
+def edit_user(user_id: str, username: str = None, email: str = None, password: str = None, role: str = None, activation_status: str = None):
     try:
         res = users_table.get_item(Key={"user_id": user_id})
         user = res.get("Item")
@@ -53,6 +54,10 @@ def edit_user(user_id: str, username: str = None, email: str = None, password: s
             update_expr += " #p = :p,"
             expr_attrs[":p"] = enc_pass
             expr_names["#p"] = "password"
+        if role:
+            update_expr += " #r = :r,"
+            expr_attrs[":r"] = role
+            expr_names["#r"] = "role"
         if activation_status:
             update_expr += " #a = :a,"
             expr_attrs[":a"] = activation_status
@@ -72,3 +77,19 @@ def edit_user(user_id: str, username: str = None, email: str = None, password: s
         return {"message": "User updated successfully"}
     except Exception as e:
         raise Exception(f"Failed to update user: {str(e)}")
+
+def create_user_by_admin(username, email, password, role="user"):
+    from app.services.auth_service import register_user
+    try:
+        return register_user(username, email, password, role=role)
+    except Exception as e:
+        raise Exception(f"Failed to create user: {str(e)}")
+
+def get_users_short_list():
+    try:
+        res = users_table.scan(
+            ProjectionExpression="user_id, username, email"
+        )
+        return res.get("Items", [])
+    except Exception as e:
+        raise Exception(f"Failed to get users list: {str(e)}")

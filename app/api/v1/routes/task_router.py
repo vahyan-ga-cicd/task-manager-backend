@@ -63,3 +63,15 @@ async def delete(task_id: str, user_id: str = Depends(get_current_user_id)):
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/stats")
+async def fetch_stats(user_id: str = Depends(get_current_user_id)):
+    from app.services.task_service import get_task_stats
+    try:
+        stats = get_task_stats(user_id)
+        return {
+            "status": "success",
+            "data": stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
