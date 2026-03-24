@@ -24,6 +24,10 @@ resource "aws_dynamodb_table" "task_users" {
   tags = {
     Project = "TaskManager"
   }
+  lifecycle {
+    prevent_destroy = false
+    ignore_changes = all
+  }
 }
 
 
@@ -43,5 +47,13 @@ resource "aws_dynamodb_table" "tasks" {
   attribute {
     name = "task_id"
     type = "S"
+  }
+  lifecycle {
+    prevent_destroy = false
+    ignore_changes = all
+
+  }
+  tags = {
+    Project = "TaskManager"
   }
 }
