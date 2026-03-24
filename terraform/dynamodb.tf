@@ -1,6 +1,6 @@
 resource "aws_dynamodb_table" "users" {
 
-  name         = "Users"
+  name         = "Task_Users"
   billing_mode = "PAY_PER_REQUEST"
 
   hash_key = "user_id"
