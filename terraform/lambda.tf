@@ -7,19 +7,21 @@ resource "aws_lambda_function" "backend" {
   role    = aws_iam_role.lambda_role.arn
   timeout = 30
 
+
   vpc_config {
     subnet_ids         = data.aws_subnets.default.ids
     security_group_ids = [aws_security_group.lambda_sg.id]
   }
+
   environment {
     variables = {
-      JWT_SECRET  = var.jwt_secret
+      JWT_SECRET      = var.jwt_secret
       PASS_SECRET_KEY = var.pass_secret_key
-      REDIS_HOST  = var.redis_host
-      REDIS_PORT  = var.redis_port
-      USERS_TABLE = var.users_table
-      TASKS_TABLE = var.tasks_table
-      ENVIRONMENT = var.environment
+      REDIS_HOST      = var.redis_host
+      REDIS_PORT      = var.redis_port
+      USERS_TABLE     = var.users_table
+      TASKS_TABLE     = var.tasks_table
+      ENVIRONMENT     = var.environment
     }
   }
 }
