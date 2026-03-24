@@ -7,6 +7,9 @@ resource "aws_lambda_function" "backend" {
   role    = aws_iam_role.lambda_role.arn
   timeout = 30
 
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_vpc_access
+  ]
 
   vpc_config {
     subnet_ids         = data.aws_subnets.default.ids

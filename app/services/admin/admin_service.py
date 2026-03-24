@@ -1,4 +1,4 @@
-# from app.config.db import get_table
+
 from app.config.db import get_table
 from app.config.settings import USERS_TABLE
 from app.utils.crypto import decrypt_password, encrypt_password
