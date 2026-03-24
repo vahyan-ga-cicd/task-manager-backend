@@ -11,7 +11,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "task-manager-state"
+    bucket = "vahyan-taskmanagement"
     key    = "backend/terraform.tfstate"
     region = "ap-south-1"
   }
