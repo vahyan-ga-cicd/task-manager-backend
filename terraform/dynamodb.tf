@@ -1,4 +1,4 @@
-resource "aws_dynamodb_table" "users" {
+resource "aws_dynamodb_table" "task_users" {
 
   name         = "Task_Users"
   billing_mode = "PAY_PER_REQUEST"
