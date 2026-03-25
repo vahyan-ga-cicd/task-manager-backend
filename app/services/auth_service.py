@@ -9,13 +9,25 @@ tasks_table = get_table(TASKS_TABLE)
 
 from fastapi import HTTPException
 from app.utils.crypto import encrypt_password,decrypt_password
-counter = 1
-
 def generate_id()->str:
-    global counter
-    user_id = f"VAH{counter:03d}"
-    counter += 1
-    return user_id
+    response = users_table.scan(ProjectionExpression="user_id")
+    items = response.get("Items", [])
+    
+    used_numbers = set()
+    for item in items:
+        uid = item.get("user_id", "")
+        if uid.startswith("VAH"):
+            try:
+                num = int(uid[3:])
+                used_numbers.add(num)
+            except ValueError:
+                pass
+                
+    next_id = 1
+    while next_id in used_numbers:
+        next_id += 1
+        
+    return f"VAH{next_id:03d}"
 def register_user(username, email, password,role="user",activation_status="active"):
 
     if len(password) < 6:
