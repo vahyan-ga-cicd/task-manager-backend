@@ -4,8 +4,7 @@ from typing import Optional
 from app.services.admin.admin_service import get_all_users, edit_user, create_user_by_admin, get_users_short_list
 from app.api.v1.middleware.auth_middleware import get_current_user_id
 from app.services.auth_service import get_user
-from app.services.task_service import update_task_generic, get_all_tasks_public,assign_task,get_tasks_by_admin,get_admin_task_stats
-
+from app.services.task_service import update_task_generic, get_all_tasks_public,assign_task,get_tasks_by_admin,get_admin_task_stats,delete_task
 
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -35,6 +34,7 @@ class AssignTaskRequest(BaseModel):
 class AdminUpdateTaskRequest(BaseModel):
     status: Optional[str] = None
     priority: Optional[str] = None
+    on_hold_reason: Optional[str] = None
 
 def verify_admin(user_id: str = Depends(get_current_user_id)):
     try:
@@ -113,8 +113,7 @@ async def users_short_list(admin_id: str = Depends(verify_admin_or_coordinator))
 
 @router.post("/assign-task")
 async def admin_assign_task(request: AssignTaskRequest, admin_id: str = Depends(verify_admin_or_coordinator)):
-    from app.services.task_service import assign_task
-    from app.services.auth_service import get_user
+    
     try:
         # Fetch Admin's info
         admin_info = get_user(admin_id)
@@ -150,39 +149,39 @@ async def admin_assign_task(request: AssignTaskRequest, admin_id: str = Depends(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.put("/update-task/{target_user_id}/{task_id}")
-async def admin_update_task(target_user_id: str, task_id: str, request: AdminUpdateTaskRequest, admin_id: str = Depends(verify_admin_or_coordinator)):
+# @router.put("/update-task/{target_user_id}/{task_id}")
+# async def admin_update_task(target_user_id: str, task_id: str, request: AdminUpdateTaskRequest, admin_id: str = Depends(verify_admin_or_coordinator)):
    
-    try:
-        updates = {k: v for k, v in request.dict().items() if v is not None}
-        if not updates:
-            return {"message": "No updates provided"}
+#     try:
+#         updates = {k: v for k, v in request.dict().items() if v is not None}
+#         if not updates:
+#             return {"message": "No updates provided"}
 
-        # Fetch admin role
-        admin_info = get_user(admin_id)
-        admin_role = admin_info.get("data", {}).get("user_data", {}).get("role")
+#         # Fetch admin role
+#         admin_info = get_user(admin_id)
+#         admin_role = admin_info.get("data", {}).get("user_data", {}).get("role")
 
-        # Custom logic for coordinator: cannot update status of tasks they assigned to others
-        if admin_role == "coordinator" and target_user_id != admin_id:
-            if "status" in updates:
-                 raise HTTPException(status_code=403, detail="Coordinators cannot update the status of tasks they assigned to others. They can only delete them.")
+#         # Custom logic for coordinator: cannot update status of tasks they assigned to others
+#         if admin_role == "coordinator" and target_user_id != admin_id:
+#             if "status" in updates:
+#                  raise HTTPException(status_code=403, detail="Coordinators cannot update the status of tasks they assigned to others. They can only delete them.")
 
-        result = update_task_generic(target_user_id, task_id, updates)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+#         result = update_task_generic(target_user_id, task_id, updates)
+#         return result
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/all-tasks")
-async def get_all_manageable_tasks(admin_id: str = Depends(verify_admin)):
+# @router.get("/all-tasks")
+# async def get_all_manageable_tasks(admin_id: str = Depends(verify_admin)):
    
-    try:
-        tasks = get_all_tasks_public()
-        return {
-            "status": "success",
-            "data": tasks
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+#     try:
+#         tasks = get_all_tasks_public()
+#         return {
+#             "status": "success",
+#             "data": tasks
+#         }
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/my-tasks")
 async def get_admin_own_tasks(admin_id: str = Depends(verify_admin)):
@@ -217,8 +216,7 @@ async def get_admin_stats(admin_id: str = Depends(verify_admin)):
 
 @router.delete("/delete-task/{target_user_id}/{task_id}")
 async def delete_task_by_admin(target_user_id: str, task_id: str, admin_id: str = Depends(verify_admin_or_coordinator)):
-    from app.services.task_service import delete_task, get_all_tasks_public
-    from app.services.auth_service import get_user
+
     try:
         admin_info = get_user(admin_id)
         admin_data = admin_info.get("data", {}).get("user_data", {})

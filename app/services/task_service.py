@@ -120,19 +120,24 @@ def update_task_generic(user_id, task_id, updates: dict):
 
     return {"message": "task updated successfully"}
 
-def update_task(user_id, task_id, status, completed_at=None):
+def update_task(user_id, task_id, status, reason=None, completed_at=None):
     updates = {
         "status": status
     }
 
+    
+    if status == "on-hold":
+        updates["on_hold_reason"] = reason
+
+    else:
+        updates["on_hold_reason"] = None  # clear if not on-hold
+
     if status.lower() == "complete":
-        # If no completed_at provided, generate current date string (dateline)
         ist = pytz.timezone("Asia/Kolkata")
         if not completed_at:
             completed_at = datetime.datetime.now(ist).strftime("%Y-%m-%d") 
         updates["completed_at"] = str(completed_at)
     else:
-        # Clear completed_at if status is not complete
         updates["completed_at"] = None
 
     return update_task_generic(user_id, task_id, updates)
@@ -237,21 +242,21 @@ def get_tasks_by_admin(admin_name):
     except Exception as e:
         raise Exception(f"Failed to fetch tasks for admin {admin_name}: {str(e)}")
 
-def get_task_stats(user_id):
-    try:
-        response = tasks_table.query(
-            KeyConditionExpression=Key("user_id").eq(user_id)
-        )
-        tasks = response.get("Items", [])
-        stats = {
-            "total": len(tasks),
-            "pending": len([t for t in tasks if t.get("status") == "pending"]),
-            "ongoing": len([t for t in tasks if t.get("status") == "ongoing"]),
-            "complete": len([t for t in tasks if t.get("status") == "complete"])
-        }
-        return stats
-    except Exception as e:
-        raise Exception(f"Failed to fetch stats for user {user_id}: {str(e)}")
+# def get_task_stats(user_id):
+#     try:
+#         response = tasks_table.query(
+#             KeyConditionExpression=Key("user_id").eq(user_id)
+#         )
+#         tasks = response.get("Items", [])
+#         stats = {
+#             "total": len(tasks),
+#             "pending": len([t for t in tasks if t.get("status") == "pending"]),
+#             "ongoing": len([t for t in tasks if t.get("status") == "ongoing"]),
+#             "complete": len([t for t in tasks if t.get("status") == "complete"])
+#         }
+#         return stats
+#     except Exception as e:
+#         raise Exception(f"Failed to fetch stats for user {user_id}: {str(e)}")
 
 def get_admin_task_stats(admin_name):
     

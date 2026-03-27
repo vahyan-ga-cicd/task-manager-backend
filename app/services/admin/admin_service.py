@@ -2,6 +2,7 @@
 from app.config.db import get_table
 from app.config.settings import USERS_TABLE
 from app.utils.crypto import decrypt_password, encrypt_password
+from app.services.auth_service import register_user
 
 users_table = get_table(USERS_TABLE)
 
@@ -84,7 +85,7 @@ def edit_user(user_id: str, username: str = None, email: str = None, password: s
         raise Exception(f"Failed to update user: {str(e)}")
 
 def create_user_by_admin(username, email, password, role="user", department="IT"):
-    from app.services.auth_service import register_user
+    
     try:
         return register_user(username, email, password, role=role, department=department)
     except Exception as e:
