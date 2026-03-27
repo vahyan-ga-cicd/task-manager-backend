@@ -5,6 +5,7 @@ python-dotenv
 PyJWT
 bcrypt
 redis
+pytz
 mangum
 python-multipart
 pydantic==2.9.2

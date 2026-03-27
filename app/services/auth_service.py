@@ -10,25 +10,37 @@ tasks_table = get_table(TASKS_TABLE)
 from fastapi import HTTPException
 from app.utils.crypto import encrypt_password,decrypt_password
 def generate_id()->str:
-    response = users_table.scan(ProjectionExpression="user_id")
-    items = response.get("Items", [])
-    
     used_numbers = set()
-    for item in items:
-        uid = item.get("user_id", "")
-        if uid.startswith("VAH"):
-            try:
-                num = int(uid[3:])
-                used_numbers.add(num)
-            except ValueError:
-                pass
+    exclusive_start_key = None
+    
+    while True:
+        scan_kwargs = {"ProjectionExpression": "user_id"}
+        if exclusive_start_key:
+            scan_kwargs["ExclusiveStartKey"] = exclusive_start_key
+            
+        response = users_table.scan(**scan_kwargs)
+        items = response.get("Items", [])
+        
+        for item in items:
+            uid = item.get("user_id", "")
+            if uid.startswith("VAH"):
+                try:
+                    num = int(uid[3:])
+                    used_numbers.add(num)
+                except ValueError:
+                    pass
+        
+        exclusive_start_key = response.get("LastEvaluatedKey")
+        if not exclusive_start_key:
+            break
                 
     next_id = 1
     while next_id in used_numbers:
         next_id += 1
         
     return f"VAH{next_id:03d}"
-def register_user(username, email, password,role="user",activation_status="active"):
+
+def register_user(username, email, password, role="user", activation_status="active", department="IT"):
 
     if len(password) < 6:
         raise HTTPException(
@@ -64,8 +76,10 @@ def register_user(username, email, password,role="user",activation_status="activ
             "email": email,
             "password": encrypted_password,
             "role": role,
-            "activation_status": activation_status
-        }
+            "activation_status": activation_status,
+            "department": department
+        },
+        ConditionExpression="attribute_not_exists(user_id)"
     )
 
     return {
@@ -74,7 +88,8 @@ def register_user(username, email, password,role="user",activation_status="activ
         "username": username,
         "email": email,
         "role": role,
-        "activation_status": activation_status
+        "activation_status": activation_status,
+        "department": department
        }
     }
 
@@ -152,7 +167,8 @@ def get_user(user_id):
                 "username": user["username"],
                 "email": user["email"],
                 "role": user.get("role", "user"),
-                "activation_status": user.get("activation_status", "active")
+                "activation_status": user.get("activation_status", "active"),
+                "department": user.get("department", "IT")
             }
             }
         }

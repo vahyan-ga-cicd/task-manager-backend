@@ -23,14 +23,15 @@ def get_all_users():
                 "hashed_password": encrypted_password,
                 "email": user["email"],
                 "role": user.get("role", "user"),
-                "activation_status": user.get("activation_status",None)
+                "activation_status": user.get("activation_status", None),
+                "department": user.get("department", "IT")
             })
 
         return result
     except Exception as e:
         raise Exception(f"Failed to get all users: {str(e)}")
 
-def edit_user(user_id: str, username: str = None, email: str = None, password: str = None, role: str = None, activation_status: str = None):
+def edit_user(user_id: str, username: str = None, email: str = None, password: str = None, role: str = None, activation_status: str = None, department: str = None):
     try:
         res = users_table.get_item(Key={"user_id": user_id})
         user = res.get("Item")
@@ -62,6 +63,10 @@ def edit_user(user_id: str, username: str = None, email: str = None, password: s
             update_expr += " #a = :a,"
             expr_attrs[":a"] = activation_status
             expr_names["#a"] = "activation_status"
+        if department:
+            update_expr += " #d = :d,"
+            expr_attrs[":d"] = department
+            expr_names["#d"] = "department"
             
         if not expr_attrs:
             return {"message": "No fields to update"}
@@ -78,17 +83,18 @@ def edit_user(user_id: str, username: str = None, email: str = None, password: s
     except Exception as e:
         raise Exception(f"Failed to update user: {str(e)}")
 
-def create_user_by_admin(username, email, password, role="user"):
+def create_user_by_admin(username, email, password, role="user", department="IT"):
     from app.services.auth_service import register_user
     try:
-        return register_user(username, email, password, role=role)
+        return register_user(username, email, password, role=role, department=department)
     except Exception as e:
         raise Exception(f"Failed to create user: {str(e)}")
 
 def get_users_short_list():
     try:
         res = users_table.scan(
-            ProjectionExpression="user_id, username, email"
+            ProjectionExpression="user_id, username, email, #r",
+            ExpressionAttributeNames={"#r": "role"}
         )
         return res.get("Items", [])
     except Exception as e:

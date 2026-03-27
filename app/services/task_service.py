@@ -6,6 +6,10 @@ from app.config.db import get_table
 from app.config.redis_db import redis_client
 from app.config.settings import TASKS_TABLE, ENVIRONMENT
 from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr
+import datetime
+import pytz
+
 tasks_table = get_table(TASKS_TABLE)
 
 # Global flag to disable Redis
@@ -13,6 +17,7 @@ redis_disabled = ENVIRONMENT == "development"
 
 def create_task(user_id, title, description, priority="Normal"):
     task_id = str(uuid.uuid4())
+    IST = pytz.timezone("Asia/Kolkata")
     item = {
         "user_id": user_id,
         "task_id": task_id,
@@ -20,7 +25,7 @@ def create_task(user_id, title, description, priority="Normal"):
         "description": description,
         "status": "pending",
         "priority": priority,
-        "created_at": str(datetime.datetime.utcnow())
+        "created_at": str(datetime.datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"))
     }
     tasks_table.put_item(Item=item)
     global redis_disabled
@@ -71,18 +76,29 @@ def update_task_generic(user_id, task_id, updates: dict):
         if ongoing_tasks:
             raise Exception("You can only have one task as ongoing at a time.")
 
-    update_expression = "SET "
+    set_expressions = []
+    remove_expressions = []
     expression_attr_names = {}
     expression_attr_values = {}
     
     for i, (key, value) in enumerate(updates.items()):
         attr_name = f"#k{i}"
-        attr_val = f":v{i}"
-        update_expression += f"{attr_name} = {attr_val}, "
         expression_attr_names[attr_name] = key
-        expression_attr_values[attr_val] = value
         
-    update_expression = update_expression.rstrip(", ")
+        if value is None:
+            remove_expressions.append(attr_name)
+        else:
+            attr_val = f":v{i}"
+            set_expressions.append(f"{attr_name} = {attr_val}")
+            expression_attr_values[attr_val] = value
+            
+    update_expression = ""
+    if set_expressions:
+        update_expression += "SET " + ", ".join(set_expressions)
+    if remove_expressions:
+        if update_expression:
+            update_expression += " "
+        update_expression += "REMOVE " + ", ".join(remove_expressions)
 
     tasks_table.update_item(
         Key={
@@ -91,7 +107,7 @@ def update_task_generic(user_id, task_id, updates: dict):
         },
         UpdateExpression=update_expression,
         ExpressionAttributeNames=expression_attr_names,
-        ExpressionAttributeValues=expression_attr_values
+        ExpressionAttributeValues=expression_attr_values if expression_attr_values else None
     )
     
     global redis_disabled
@@ -104,8 +120,22 @@ def update_task_generic(user_id, task_id, updates: dict):
 
     return {"message": "task updated successfully"}
 
-def update_task(user_id, task_id, status):
-    return update_task_generic(user_id, task_id, {"status": status})
+def update_task(user_id, task_id, status, completed_at=None):
+    updates = {
+        "status": status
+    }
+
+    if status.lower() == "complete":
+        # If no completed_at provided, generate current date string (dateline)
+        ist = pytz.timezone("Asia/Kolkata")
+        if not completed_at:
+            completed_at = datetime.datetime.now(ist).strftime("%Y-%m-%d") 
+        updates["completed_at"] = str(completed_at)
+    else:
+        # Clear completed_at if status is not complete
+        updates["completed_at"] = None
+
+    return update_task_generic(user_id, task_id, updates)
 
 def delete_task(user_id, task_id):
     tasks_table.delete_item(
@@ -123,21 +153,25 @@ def delete_task(user_id, task_id):
             redis_disabled = True
     return {"message": "task deleted successfully"}
 
-def assign_task(assigned_to_id, assigned_to_name, assigned_to_email, assigned_by_name, assigned_by_email, title, description, deadline, priority="Normal"):
+def assign_task(assigned_to_id, assigned_to_name, assigned_to_email, assigned_by_name, assigned_by_email, title, description, deadline, priority="Normal", assigned_to_dept="IT", assigned_by_dept="IT", assigned_by_role="admin", assigned_by_id=None):
     task_id = str(uuid.uuid4())
     item = {
         "user_id": assigned_to_id,
         "task_id": task_id,
         "assigned_to_name": assigned_to_name,
         "assigned_to_email": assigned_to_email,
+        "assigned_to_dept": assigned_to_dept,
         "assigned_by": assigned_by_name,
         "assigned_by_email": assigned_by_email,
+        "assigned_by_dept": assigned_by_dept,
+        "assigned_by_role": assigned_by_role,
+        "assigned_by_id": assigned_by_id,
         "title": title,
         "description": description,
         "status": "pending",
         "priority": priority,
         "deadline": deadline,
-        "created_at": str(datetime.datetime.utcnow())
+        "created_at": str(datetime.datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M:%S"))
     }
     tasks_table.put_item(Item=item)
     
@@ -151,6 +185,41 @@ def assign_task(assigned_to_id, assigned_to_name, assigned_to_email, assigned_by
             
     return item
 
+def get_tasks_for_coordinator(user_id):
+    """
+    Fetch tasks assigned TO the coordinator AND tasks assigned BY the coordinator.
+    """
+    try:
+        # 1. Tasks assigned TO the coordinator
+        res_to = tasks_table.query(
+            KeyConditionExpression=Key("user_id").eq(user_id)
+        )
+        tasks_to = res_to.get("Items", [])
+        
+        # 2. Tasks assigned BY the coordinator
+        # Since we don't have a GSI yet, we scan with a filter. 
+        # For a small app, this is acceptable.
+        res_by = tasks_table.scan(
+            FilterExpression=Attr("assigned_by_id").eq(user_id)
+        )
+        tasks_by = res_by.get("Items", [])
+        
+        # Combine (avoid duplicates if they assign to themselves)
+        seen_ids = set()
+        combined = []
+        for t in tasks_to + tasks_by:
+            if t["task_id"] not in seen_ids:
+                combined.append(t)
+                seen_ids.add(t["task_id"])
+                
+        return {
+            "status": "success",
+            "status_code": 200,
+            "data": combined
+        }
+    except Exception as e:
+        raise Exception(f"Failed to fetch tasks for coordinator {user_id}: {str(e)}")
+
 def get_all_tasks_public():
     try:
         res = tasks_table.scan()
@@ -159,7 +228,7 @@ def get_all_tasks_public():
         raise Exception(f"Failed to fetch public tasks: {str(e)}")
 
 def get_tasks_by_admin(admin_name):
-    from boto3.dynamodb.conditions import Attr
+    
     try:
         response = tasks_table.scan(
             FilterExpression=Attr("assigned_by").eq(admin_name)
@@ -185,7 +254,7 @@ def get_task_stats(user_id):
         raise Exception(f"Failed to fetch stats for user {user_id}: {str(e)}")
 
 def get_admin_task_stats(admin_name):
-    from boto3.dynamodb.conditions import Attr
+    
     try:
         response = tasks_table.scan(
             FilterExpression=Attr("assigned_by").eq(admin_name)
