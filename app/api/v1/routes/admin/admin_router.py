@@ -4,7 +4,7 @@ from typing import Optional
 from app.services.admin.admin_service import get_all_users, edit_user, create_user_by_admin, get_users_short_list
 from app.api.v1.middleware.auth_middleware import get_current_user_id
 from app.services.auth_service import get_user
-from app.services.task_service import update_task_generic, get_all_tasks_public,assign_task,get_tasks_by_admin,get_admin_task_stats,delete_task
+from app.services.task_service import update_task_generic, get_all_tasks_public,assign_task,get_tasks_by_admin,get_admin_task_stats,delete_task,get_task_by_id
 
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -223,11 +223,8 @@ async def delete_task_by_admin(target_user_id: str, task_id: str, admin_id: str 
         admin_role = admin_data.get("role")
 
         if admin_role == "coordinator":
-            # Fetch the task to check assigned_by_id
-            # NOTE: Scan is used here since we don't have a direct lookup with task_id only 
-            # and target_user_id is the PK.
-            all_tasks = get_all_tasks_public()
-            task = next((t for t in all_tasks if t.get("task_id") == task_id and t.get("user_id") == target_user_id), None)
+            # Direct lookup instead of full scan
+            task = get_task_by_id(target_user_id, task_id)
             
             if not task:
                 raise HTTPException(status_code=404, detail="Task not found")

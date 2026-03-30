@@ -120,27 +120,94 @@ def update_task_generic(user_id, task_id, updates: dict):
 
     return {"message": "task updated successfully"}
 
-def update_task(user_id, task_id, status, reason=None, completed_at=None):
+def get_task_by_id(user_id, task_id):
+    """
+    Fetches a specific task using partition and sort keys.
+    """
+    try:
+        res = tasks_table.get_item(
+            Key={
+                "user_id": user_id,
+                "task_id": task_id
+            }
+        )
+        return res.get("Item")
+    except Exception as e:
+        raise Exception(f"Failed to fetch task: {str(e)}")
+
+def update_task(
+    user_id,
+    task_id,
+    status,
+    reason=None,
+    comment=None,
+    completed_at=None,
+    role=None,
+    is_verified=False,
+    updated_by=None
+):
+
+    # 🔍 Fetch task
+    task = get_task_by_id(user_id, task_id)
+    if not task:
+        raise Exception("Task not found")
+
+    assigned_by_id = task.get("assigned_by_id")
+    task_owner_id = task.get("user_id")
+
+    # ==================================================
+    # 🔒 COORDINATOR RULES
+    # ==================================================
+    is_assigned_by_me = False
+    is_assigned_to_me = False
+
+    if role == "coordinator":
+        is_assigned_by_me = assigned_by_id == updated_by
+        is_assigned_to_me = task_owner_id == updated_by
+
+        if not (is_assigned_by_me or is_assigned_to_me):
+            raise Exception("Unauthorized task update")
+
+        # 🎯 If task is NOT assigned to me (it's someone else's task), I can ONLY complete it
+        if not is_assigned_to_me:
+            if status.lower() != "complete":
+                raise Exception("Coordinator can only mark task as complete")
+            if not is_verified:
+                raise Exception("Verification required")
+            if not comment or comment.strip() == "":
+                raise Exception("Comment is required for force completion")
+
+    # ==================================================
+    # ✅ UPDATE DATA
+    # ==================================================
     updates = {
         "status": status
     }
 
-    
+    # Save coordinator metadata (ONLY when verifying someone else's task)
+    if role == "coordinator" and status.lower() == "complete" and not is_assigned_to_me:
+        updates["verified_by_coordinator"] = True
+        updates["coordinator_comment"] = comment
+
+    # On hold reason
     if status == "on-hold":
         updates["on_hold_reason"] = reason
-
     else:
-        updates["on_hold_reason"] = None  # clear if not on-hold
+        updates["on_hold_reason"] = None
 
+    # Completion date
     if status.lower() == "complete":
         ist = pytz.timezone("Asia/Kolkata")
         if not completed_at:
-            completed_at = datetime.datetime.now(ist).strftime("%Y-%m-%d") 
+            completed_at = datetime.datetime.now(ist).strftime("%Y-%m-%d")
         updates["completed_at"] = str(completed_at)
     else:
         updates["completed_at"] = None
 
     return update_task_generic(user_id, task_id, updates)
+
+
+    
 
 def delete_task(user_id, task_id):
     tasks_table.delete_item(
@@ -225,12 +292,25 @@ def get_tasks_for_coordinator(user_id):
     except Exception as e:
         raise Exception(f"Failed to fetch tasks for coordinator {user_id}: {str(e)}")
 
-def get_all_tasks_public():
+def get_all_tasks_public(limit=10, last_key=None):
     try:
-        res = tasks_table.scan()
-        return res.get("Items", [])
+        params = {
+            "Limit": limit
+        }
+
+        if last_key:
+            params["ExclusiveStartKey"] = last_key
+
+        res = tasks_table.scan(**params)
+
+        return {
+            "items": res.get("Items", []),
+            "lastKey": res.get("LastEvaluatedKey")
+        }
+
     except Exception as e:
         raise Exception(f"Failed to fetch public tasks: {str(e)}")
+
 
 def get_tasks_by_admin(admin_name):
     
@@ -269,8 +349,30 @@ def get_admin_task_stats(admin_name):
             "total": len(tasks),
             "pending": len([t for t in tasks if t.get("status") == "pending"]),
             "ongoing": len([t for t in tasks if t.get("status") == "ongoing"]),
-            "complete": len([t for t in tasks if t.get("status") == "complete"])
+            "complete": len([t for t in tasks if t.get("status") == "complete"]),
+            "on-hold": len([t for t in tasks if t.get("status") == "on-hold"])
         }
         return stats
     except Exception as e:
         raise Exception(f"Failed to fetch stats for admin {admin_name}: {str(e)}")
+
+def get_public_stats():
+    """
+    Scans all tasks to provide global statistics for the public dashboard.
+    """
+    try:
+        # For a small app, a full scan is okay. 
+        # For production with many items, this should be cached or use an aggregate table.
+        response = tasks_table.scan()
+        tasks = response.get("Items", [])
+        
+        stats = {
+            "total": len(tasks),
+            "pending": len([t for t in tasks if t.get("status") == "pending"]),
+            "ongoing": len([t for t in tasks if t.get("status") == "ongoing"]),
+            "complete": len([t for t in tasks if t.get("status") == "complete"]),
+            "on-hold": len([t for t in tasks if t.get("status") == "on-hold"])
+        }
+        return stats
+    except Exception as e:
+        raise Exception(f"Failed to fetch public stats: {str(e)}")

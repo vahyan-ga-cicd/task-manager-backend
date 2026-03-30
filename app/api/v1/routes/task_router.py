@@ -1,3 +1,4 @@
+from fastapi import Query
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
@@ -10,10 +11,9 @@ from app.services.task_service import (
     get_tasks_for_coordinator
 )
 from app.api.v1.middleware.auth_middleware import get_current_user_id
-# from app.services.task_service import get_tasks, get_tasks_for_coordinator
+
 from app.services.auth_service import get_user
-# from app.services.task_service import get_tasks_for_coordinator 
-# from app.services.auth_service import get_user  
+
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 class CreateTaskRequest(BaseModel):     
@@ -24,6 +24,8 @@ class CreateTaskRequest(BaseModel):
 class UpdateTaskRequest(BaseModel):
     on_hold_reason: Optional[str] = None
     status: str
+    comment_by_coordinator: Optional[str] = None
+    is_verified: Optional[bool] = False 
 
 class DeleteTaskRequest(BaseModel):
     task_id: str
@@ -61,21 +63,33 @@ async def list_tasks(user_id: str = Depends(get_current_user_id)):
 async def update(
     task_id: str,
     request: UpdateTaskRequest,
-    user_id: str = Depends(get_current_user_id)
+    user_id: str = Depends(get_current_user_id),  
+    target_user_id: str = Query(...)              
 ):
     try:
+       
+        user_info = get_user(user_id)
+        role = user_info.get("data", {}).get("user_data", {}).get("role")
+
+       
+        current_user_id = user_id       
+        task_owner_id = target_user_id  
+
         result = update_task(
-            user_id=user_id,
+            user_id=task_owner_id,     
             task_id=task_id,
             status=request.status,
-            reason=request.on_hold_reason
+            reason=request.on_hold_reason,
+            comment=request.comment_by_coordinator,
+            role=role,
+            is_verified=request.is_verified,
+            updated_by=current_user_id  
         )
 
         return result
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
         
 # @router.delete("/delete-task/{task_id}")
 # async def delete(task_id: str, user_id: str = Depends(get_current_user_id)):
