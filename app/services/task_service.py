@@ -15,7 +15,7 @@ from app.services.auth_service import get_user
 tasks_table = get_table(TASKS_TABLE)
 
 # Global flag to disable Redis
-redis_disabled = ENVIRONMENT == "development"
+redis_disabled = True
 
 def create_task(user_id, title, description, priority="Normal"):
     task_id = str(uuid.uuid4())

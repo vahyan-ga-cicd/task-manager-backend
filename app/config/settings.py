@@ -12,6 +12,6 @@ AUDIT_LOGS_TABLE = os.getenv("AUDIT_LOGS_TABLE", "AuditLogs")
 JWT_SECRET = os.getenv("JWT_SECRET")
 PASS_SECRET_KEY = os.getenv("PASS_SECRET_KEY")
 
-REDIS_HOST = os.getenv("REDIS_HOST")
-REDIS_PORT = os.getenv("REDIS_PORT")
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = os.getenv("REDIS_PORT", "6379")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")

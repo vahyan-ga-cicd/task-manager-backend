@@ -6,14 +6,6 @@ variable "pass_secret_key" {
   type = string
 }
 
-variable "redis_host" {
-  type = string
-}
-
-variable "redis_port" {
-  type = string
-}
-
 variable "users_table" {
   type = string
 }
