@@ -9,6 +9,8 @@ from boto3.dynamodb.conditions import Key
 from boto3.dynamodb.conditions import Attr
 import datetime
 import pytz
+from app.services.audit_service import create_audit_log
+from app.services.auth_service import get_user
 
 tasks_table = get_table(TASKS_TABLE)
 
@@ -199,23 +201,79 @@ def update_task(
     if status.lower() == "complete":
         ist = pytz.timezone("Asia/Kolkata")
         if not completed_at:
-            completed_at = datetime.datetime.now(ist).strftime("%Y-%m-%d")
+            completed_at = datetime.datetime.now(ist).isoformat()
         updates["completed_at"] = str(completed_at)
     else:
         updates["completed_at"] = None
 
-    return update_task_generic(user_id, task_id, updates)
+    result = update_task_generic(user_id, task_id, updates)
+
+    # Logging
+    try:
+        updater_info = get_user(updated_by)
+        u_data = updater_info.get("data", {}).get("user_data", {})
+        payload = {
+            "old_status": task.get("status"),
+            "new_status": status,
+            "updates": updates
+        }
+        create_audit_log(
+            performed_by_id=updated_by,
+            performed_by_name=u_data.get("username", "Unknown"),
+            performed_by_email=u_data.get("email", "Unknown"),
+            performed_by_role=role,
+            task_id=task_id,
+            task_title=task.get("title", "Unknown"),
+            action="STATUS_UPDATE",
+            details=f"Status changed to {status}",
+            task_owner_id=user_id,
+            task_assigned_by_id=assigned_by_id,
+            priority=task.get("priority"),
+            department=u_data.get("department"),
+            comment=comment or reason,
+            payload=payload
+        )
+    except Exception as log_error:
+        print(f"Log integration error: {log_error}")
+
+    return result
 
 
     
 
-def delete_task(user_id, task_id):
+def delete_task(user_id, task_id, deleted_by_id=None):
+    # Fetch task info before deletion for logging
+    task = get_task_by_id(user_id, task_id)
+    
     tasks_table.delete_item(
         Key={
             "user_id": user_id,
             "task_id": task_id
         }
     )
+    
+    # Logging
+    if deleted_by_id and task:
+        try:
+            deleter_info = get_user(deleted_by_id)
+            d_data = deleter_info.get("data", {}).get("user_data", {})
+            create_audit_log(
+                performed_by_id=deleted_by_id,
+                performed_by_name=d_data.get("username", "Unknown"),
+                performed_by_email=d_data.get("email", "Unknown"),
+                performed_by_role=d_data.get("role", "admin"),
+                task_id=task_id,
+                task_title=task.get("title", "Unknown"),
+                action="TASK_DELETED",
+                details=f"Task '{task.get('title')}' was deleted.",
+                task_owner_id=user_id,
+                task_assigned_by_id=task.get("assigned_by_id"),
+                department=d_data.get("department"),
+                payload=task
+            )
+        except Exception as log_error:
+            print(f"Log integration error in delete_task: {log_error}")
+
     global redis_disabled
     if not redis_disabled:
         try:
@@ -248,14 +306,29 @@ def assign_task(assigned_to_id, assigned_to_name, assigned_to_email, assigned_by
     tasks_table.put_item(Item=item)
     
     global redis_disabled
-    if not redis_disabled:
-        try:
-            redis_client.delete(f"tasks:{assigned_to_id}")
-        except Exception as e:
-            print(f"Redis error: {e}")
-            redis_disabled = True
-            
-    return item
+    res = item
+    
+    # Logging
+    try:
+        create_audit_log(
+            performed_by_id=assigned_by_id,
+            performed_by_name=assigned_by_name,
+            performed_by_email=assigned_by_email,
+            performed_by_role=assigned_by_role,
+            task_id=task_id,
+            task_title=title,
+            action="TASK_ASSIGNED",
+            details=f"Task assigned to {assigned_to_name} ({assigned_to_email})",
+            task_owner_id=assigned_to_id,
+            task_assigned_by_id=assigned_by_id,
+            priority=priority,
+            department=assigned_by_dept,
+            payload=item
+        )
+    except Exception as log_error:
+        print(f"Log integration error in assign_task: {log_error}")
+
+    return res
 
 def get_tasks_for_coordinator(user_id):
     """

@@ -237,7 +237,7 @@ async def delete_task_by_admin(target_user_id: str, task_id: str, admin_id: str 
             if task.get("assigned_by_id") != admin_id:
                 raise HTTPException(status_code=403, detail="Coordinators can only delete tasks they personally assigned.")
 
-        result = delete_task(target_user_id, task_id)
+        result = delete_task(target_user_id, task_id, deleted_by_id=admin_id)
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

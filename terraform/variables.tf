@@ -22,6 +22,10 @@ variable "tasks_table" {
   type = string
 }
 
+variable "audit_logs_table" {
+  type = string
+}
+
 variable "image_tag" {
   type = string
 }

@@ -7,6 +7,7 @@ AWS_REGION = os.getenv("AWS_REGION")
 
 USERS_TABLE = os.getenv("USERS_TABLE")
 TASKS_TABLE = os.getenv("TASKS_TABLE")
+AUDIT_LOGS_TABLE = os.getenv("AUDIT_LOGS_TABLE", "AuditLogs")
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 PASS_SECRET_KEY = os.getenv("PASS_SECRET_KEY")
